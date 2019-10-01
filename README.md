@@ -5,4 +5,5 @@ It's still under development so don't expect anything from it.
 
 # Features
 Identity recognition using PN 532
+
 Print some info on the e-Paper Hat
