@@ -21,6 +21,7 @@ def create_db(db_name):
                 QQ INTEGER, 
                 card_id INTEGER, 
                 identity INTEGER,
+                valid_date INTEGER,
                 id INTEGER PRIMARY KEY
                 );''')
                 # UNIX Timestamp <- UTC
@@ -29,12 +30,12 @@ def create_db(db_name):
                 #           3 staff
                 #           4 society
 
-    c.execute("INSERT INTO members VALUES (strftime('%s','now'),'测试学生 1','电子信息与电气工程',13800138000,54749110, NULL, 1, NULL)")
-    c.execute("INSERT INTO members VALUES (strftime('%s','now'),'校外用户 1',NULL, 13800138001,54749111, '', 4, NULL)")
+    c.execute("INSERT INTO members VALUES (strftime('%s','now'),'测试学生 1','电子信息与电气工程',13800138000,54749110, NULL, 1,NULL, NULL)")
+    c.execute("INSERT INTO members VALUES (strftime('%s','now'),'校外用户 1',NULL, 13800138001,54749111, '', 4,365*24*60*60,NULL)")
 
     c.execute('''CREATE TABLE card_uid
-                 (uid TEXT PRIMARY KEY,
-                 id INTEGER
+                 (card_uid TEXT PRIMARY KEY,
+                 user_id INTEGER
                  )''')
     c.execute("INSERT INTO card_uid VALUES ('01234567', 0)")
     c.execute("INSERT INTO card_uid VALUES ('396c8e99', 1)")

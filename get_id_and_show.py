@@ -18,14 +18,11 @@ epd = epd2in7.EPD()
 logging.info("init and Clear")
 epd.init()
 epd.Clear(0xFF)
-font24 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 24)
-font18 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 18)
-font10 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 10)
-font5 = ImageFont.truetype(os.path.join(picdir, 'Font.ttc'), 5)
-
-
-def init():
-    welcome()
+font_file = 'shssc-el.otf'
+font24 = ImageFont.truetype(os.path.join(picdir, font_file), 24)
+font18 = ImageFont.truetype(os.path.join(picdir, font_file), 18)
+font10 = ImageFont.truetype(os.path.join(picdir, font_file), 10)
+font5 = ImageFont.truetype(os.path.join(picdir, font_file), 5)
 
 
 def new_board(color):
@@ -49,10 +46,10 @@ def print_board(Himage):
 
 
 def add_margin(draw):
-    draw.text((0, 0), 'CARD', font=font10)
-    draw.text((0, 40), 'INFO', font=font10)
-    draw.text((0, 80), 'DRAW', font=font10)
-    draw.text((0, 120), 'SHUT', font=font10)
+    draw.text((0, 5), 'CARD', font=font10)
+    draw.text((0, 70), 'INFO', font=font10)
+    draw.text((0, 130), 'DRAW', font=font10)
+    draw.text((0, 160), 'SHUT', font=font10)
 
 
 def get_card_id():
@@ -71,20 +68,51 @@ def get_card_id():
         logging.info('Waiting for RFID/NFC card...')
         while True:
             # Check if a card is available to read
-            uid = pn532.read_passive_target(timeout=1)
+            uid = pn532.read_passive_target(timeout=0.5)
+            key = get_key(timeout=0.6)
             # print('.', end="")
             # Try again if no card is available.
+            if key:
+                return '', key
             if uid is None:
                 continue
-            logging.info(f'Found card with UID  {[hex(i) for i in uid]}')
 
-            return ''.join([str(hex(i))[2:4] if len(str(hex(i))) == 4 else '0'+str(hex(i))[2] for i in uid]).upper()
+            logging.info(f'Found card with UID  {[hex(i) for i in uid]}')
+            return ''.join([str(hex(i))[2:4] if len(str(hex(i))) == 4 else '0'+str(hex(i))[2] for i in uid]).upper(), 0
 
     except Exception as e:
         print(e)
     finally:
         pass
         # GPIO.cleanup()
+
+
+def get_key(timeout=0, loop_delay = 0.1):
+    # timeout=0 stands for waiting untill a key pressed
+
+    # Initialize the four keys
+    GPIO_PINs = [5, 6, 13, 19]
+    # For key 1, 2, 3, 4 respectively
+    GPIO.setmode(GPIO.BCM)
+    for GPIO_PIN in GPIO_PINs:
+        GPIO.setup(GPIO_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+    logging.info('Waiting for key press')
+    if timeout == 0:
+        while True:
+            for i, GPIO_PIN in enumerate(GPIO_PINs):
+                if(GPIO.input(GPIO_PIN) == 0):
+                    logging.info(f"{GPIO_PIN} pin {i+1} key pressed")
+                    return i+1
+            time.sleep(loop_delay)
+    else:
+        for _ in range(int(timeout/loop_delay)):
+            for i, GPIO_PIN in enumerate(GPIO_PINs):
+                if(GPIO.input(GPIO_PIN) == 0):
+                    logging.info(f"{GPIO_PIN} pin {i+1} key pressed")
+                    return i+1
+            time.sleep(loop_delay)
+        return 0 # for no key pressed
 
 
 def welcome():
@@ -102,19 +130,64 @@ def print_card():
     # Print a card ID
     logging.info("Priting a card ID...")
     Himage, draw = new_board('w')
-    draw.text((10, 0), 'Getting Card ID...', font=font24, fill=0)
+    add_margin(draw)
+    draw.text((40, 0), '请刷卡', font=font24, fill=0)
     print_board(Himage)
     
     # Block
-    id_string = get_card_id()
-    
+    try:
+        id_string, key = get_card_id()
+    except Exception as e:
+        logging.critical(e)
+        return 1
+
+    if key:
+        return key
+
     if id_string == None:
         logging.critical("NONE string recived")
-        return
-    draw.text((10, 48), f'Got card', font=font18, fill=0)
-    draw.text((10, 70), id_string, font=font18, fill=0)
+        return 1
+    user_name = 1
+    valid_date = '永久'
+    time_date = '2019-07-07 21:00:13'
+    last_date = '2019-07-07 21:00:13'
+    Himage, draw = new_board('w')
+    add_margin(draw)
+    draw.text((40, 0), f'欢迎 {user_name}', font=font24, fill=0)
+    draw.text((40, 30), f'有效期 {valid_date}', font =font18)
+    draw.text((40, 50), f'入馆时间', font=font18)
+    draw.text((40, 70), f'         {time_date}', font=font18)
+    draw.text((40, 90), f'上次入馆', font=font18)
+    draw.text((40, 110), f'         {last_date}', font=font18)
+    draw.text((40, 130), f'请勿重复入馆', font=font18)
     print_board(Himage)
+    time.sleep(5)
+    return 1
 
+def print_debug_info():
+    # Print a card ID
+    logging.info("Debug mode...")
+    Himage, draw = new_board('w')
+    draw.text((40, 20), 'Getting Card ID...', font=font18, fill=0)
+    print_board(Himage)
+    add_margin(draw)
+    # Block
+    try:
+        id_string, key = get_card_id()
+    except Exception as e:
+        logging.critical(e)
+        return 2
+    
+    if key:
+        return key
+
+    if id_string == None:
+        logging.critical("NONE string recived")
+        return 2
+    draw.text((40, 40), f'Got card {id_string}', font=font18, fill=0)
+    print_board(Himage)
+    time.sleep(5)
+    return 2
 
 def draw_block():
     Himage, draw = new_board('w')
@@ -126,72 +199,35 @@ def draw_block():
         draw.text((i, 0), f'{i}', font=font10)
     print_board(Himage)
 
+    return get_key()
 
-def main():
-    # Initialize the four keys
-    GPIO_PINs = [5, 6, 13, 19]
-    # For key 1, 2, 3, 4 respectively
-    GPIO.setmode(GPIO.BCM)
-    for GPIO_PIN in GPIO_PINs:
-        GPIO.setup(GPIO_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-    logging.info('Waiting for key press')
-    pressed_key = 0
-    while True:
-        for i, GPIO_PIN in enumerate(GPIO_PINs):
-            if(GPIO.input(GPIO_PIN) == 0):
-                logging.info(f"{GPIO_PIN} pin {i+1} key pressed")
-                pressed_key = i + 1
-        if pressed_key:
-            break
-        time.sleep(0.1)
+def main(key=0):
+    if not key:
+        welcome()
+        key = get_key()
 
-    try:
-        if pressed_key == 1:
-            print_card()
-        elif pressed_key == 2:
-            welcome()
-        elif pressed_key == 3:
-            draw_block()
-        elif pressed_key == 4:
-            pass
+    if key == 1:
+        key = print_card()
+    elif key == 2:
+        key = print_debug_info()
+    elif key == 3:
+        key = draw_block()
+    elif key == 4:
+        key = get_key()
 
-    except IOError as e:
-        logging.info(e)
-
-    except KeyboardInterrupt:
-        logging.info("ctrl + c:")
-        # Clear
-        logging.info("Clear...")
-        epd.Clear(0xFF)
-
-        # Sleep
-        logging.info("Goto Sleep...")
-        epd.sleep()
-        epd2in7.epdconfig.module_exit()
-        exit()
+    return key
 
 
 def test():
-    epd = epd2in7.EPD()
-    epd.init()
-    # epd.sleep()
-    t1 = time.time()
-    epd.Clear(0xFF)
-    print(f"{time.time()-t1} secs used")
-    t1 = time.time()
-    epd.Clear(0x00)
-    print(f"{time.time()-t1} secs used")
-    epd.sleep()
-
-    epd2 = epd2in7.EPD()
-    epd2.init()
+    pass
 
 
 if __name__ == '__main__':
-    init()
     test_mode = False
     if test_mode:
         test()
     else:
-        main()
+        key = main()
+        while True:
+            key = main(key)
