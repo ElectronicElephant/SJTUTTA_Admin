@@ -18,10 +18,10 @@ epd = epd2in7.EPD()
 logging.info("init and Clear")
 epd.init()
 epd.Clear(0xFF)
-font_file = 'shssc-el.otf'
+font_file = 'wqy-zenhei.ttc'
 font24 = ImageFont.truetype(os.path.join(picdir, font_file), 24)
 font18 = ImageFont.truetype(os.path.join(picdir, font_file), 18)
-font10 = ImageFont.truetype(os.path.join(picdir, font_file), 10)
+font10 = ImageFont.load(os.path.join(picdir, 'wenquanyi_10pt.pil'))
 font5 = ImageFont.truetype(os.path.join(picdir, font_file), 5)
 
 
@@ -168,7 +168,7 @@ def print_debug_info():
     # Print a card ID
     logging.info("Debug mode...")
     Himage, draw = new_board('w')
-    draw.text((40, 20), 'Getting Card ID...', font=font18, fill=0)
+    draw.text((40, 20), 'Getting Card ID...', font=font10, fill=0)
     print_board(Himage)
     add_margin(draw)
     # Block
@@ -184,7 +184,7 @@ def print_debug_info():
     if id_string == None:
         logging.critical("NONE string recived")
         return 2
-    draw.text((40, 40), f'Got card {id_string}', font=font18, fill=0)
+    draw.text((40, 40), f'Got card {id_string}', font=font10, fill=0)
     print_board(Himage)
     time.sleep(5)
     return 2
